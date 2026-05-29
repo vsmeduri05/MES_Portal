@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Investment Calculator</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 20px;
+      background: #f4f4f9;
+    }
+    .tabs {
+      display: flex;
+      margin-bottom: 20px;
+      cursor: pointer;
+    }
+    .tab {
+      padding: 10px 20px;
+      background: #ddd;
+      margin-right: 5px;
+      border-radius: 5px 5px 0 0;
+    }
+    .tab.active {
+      background: #4285f4;
+      color: #fff;
+    }
+    .tab-content {
+      display: none;
+      background: #fff;
+      padding: 20px;
+      border-radius: 0 5px 5px 5px;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    }
+    .tab-content.active {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .form-section {
+      flex: 1;
+    }
+    label, input {
+      display: block;
+      margin-bottom: 10px;
+    }
+    button {
+      padding: 10px 15px;
+      background: #4285f4;
+      color: #fff;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+    .result {
+      margin-top: 15px;
+      font-weight: bold;
+    }
+    .chart-container {
+      width: 200px;
+      height: 200px;
+      margin-left: 20px;
+      display: flex;
+      align-items: center;
+    }
+    canvas {
+      max-width: 100%;
+      max-height: 100%;
+    }
+  </style>
+</head>
+<body>
+  <h1>Investment Calculator</h1>
+  <div class="tabs">
+    <div class="tab active" data-tab="sip">SIP Calculator</div>
+    <div class="tab" data-tab="lumpsum">Lumpsum Calculator</div>
+  </div>
+
+  <div id="sip" class="tab-content active">
+    <div class="form-section">
+      <label>Monthly SIP Amount: <input type="number" id="sipAmount" value="20000"></label>
+      <label>Expected Annual Return (%): <input type="number" id="sipRate" value="10"></label>
+      <label>Duration (Years): <input type="number" id="sipYears" value="5"></label>
+      <label>Annual Step-up (%): <input type="number" id="sipStepUp" value="5"></label>
+      <button onclick="calculateSIP()">Calculate</button>
+      <div class="result" id="sipResult"></div>
+    </div>
+    <div class="chart-container">
+      <canvas id="sipChart"></canvas>
+    </div>
+  </div>
+
+  <div id="lumpsum" class="tab-content">
+    <div class="form-section">
+      <label>Lumpsum Amount: <input type="number" id="lumpAmount" value="100000"></label>
+      <label>Expected Annual Return (%): <input type="number" id="lumpRate" value="10"></label>
+      <label>Duration (Years): <input type="number" id="lumpYears" value="5"></label>
+      <button onclick="calculateLumpsum()">Calculate</button>
+      <div class="result" id="lumpResult"></div>
+    </div>
+    <div class="chart-container">
+      <canvas id="lumpChart"></canvas>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script>
+    const tabs = document.querySelectorAll('.tab');
+    const contents = document.querySelectorAll('.tab-content');
+
+    tabs.forEach(tab => {
+      tab.addEventListener('click', () => {
+        tabs.forEach(t => t.classList.remove('active'));
+        contents.forEach(c => c.classList.remove('active'));
+        tab.classList.add('active');
+        document.getElementById(tab.dataset.tab).classList.add('active');
+      });
+    });
+
+    let sipChartInstance = null;
+    let lumpChartInstance = null;
+
+    function calculateSIP() {
+      const amount = parseFloat(document.getElementById('sipAmount').value);
+      const rate = parseFloat(document.getElementById('sipRate').value) / 100 / 12;
+      const years = parseInt(document.getElementById('sipYears').value);
+      const stepUp = parseFloat(document.getElementById('sipStepUp').value) / 100;
+      const months = years * 12;
+
+      let invested = 0;
+      let futureValue = 0;
+      let monthlyAmount = amount;
+
+      for (let year = 1; year <= years; year++) {
+        for (let m = 1; m <= 12; m++) {
+          futureValue = (futureValue + monthlyAmount) * (1 + rate);
+          invested += monthlyAmount;
+        }
+        monthlyAmount *= (1 + stepUp);
+      }
+
+      const profit = futureValue - invested;
+      document.getElementById('sipResult').innerText =
+        `Final Value: ₹${Math.round(futureValue).toLocaleString()} | Invested: ₹${Math.round(invested).toLocaleString()} | Profit: ₹${Math.round(profit).toLocaleString()}`;
+
+      if (sipChartInstance) sipChartInstance.destroy();
+      sipChartInstance = new Chart(document.getElementById('sipChart'), {
+        type: 'pie',
+        data: {
+          labels: ['Invested', 'Profit'],
+          datasets: [{
+            data: [Math.round(invested), Math.round(profit)],
+            backgroundColor: ['#4285f4', '#34a853']
+          }]
+        }
+      });
+    }
+
+    function calculateLumpsum() {
+      const amount = parseFloat(document.getElementById('lumpAmount').value);
+      const rate = parseFloat(document.getElementById('lumpRate').value) / 100;
+      const years = parseInt(document.getElementById('lumpYears').value);
+
+      const futureValue = amount * Math.pow(1 + rate, years);
+      const profit = futureValue - amount;
+
+      document.getElementById('lumpResult').innerText =
+        `Final Value: ₹${Math.round(futureValue).toLocaleString()} | Invested: ₹${Math.round(amount).toLocaleString()} | Profit: ₹${Math.round(profit).toLocaleString()}`;
+
+      if (lumpChartInstance) lumpChartInstance.destroy();
+      lumpChartInstance = new Chart(document.getElementById('lumpChart'), {
+        type: 'pie',
+        data: {
+          labels: ['Invested', 'Profit'],
+          datasets: [{
+            data: [Math.round(amount), Math.round(profit)],
+            backgroundColor: ['#fbbc05', '#34a853']
+          }]
+        }
+      });
+    }
+
+    window.onload = function() {
+      calculateSIP();
+      calculateLumpsum();
+    }
+  </script>
+</body>
+</html>
